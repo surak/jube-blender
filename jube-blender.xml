@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Jube blender for JURECA -->
+<jube>
+  <benchmark name="blender" outpath="run">
+    <parameterset name="systemParameter" init_with="platform.xml">
+      <parameter name="mail"></parameter>
+      <parameter name="nodes" type="int" mode="python" separator=";">1</parameter>
+      <parameter name="taskspernode" type="int">24</parameter>
+      <parameter name="threadspertask" type="int">1</parameter>
+      <parameter name="timelimit">00:15:00</parameter>
+      <!-- Each number in the frame will launch a parallel run, and render ${endframe} renders -->
+      <parameter name="frame" type="int">0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620, 630, 640, 650, 660, 670, 680, 690, 700, 710, 720, 730, 740</parameter>
+      <parameter name="endframe" mode="python" type="int">${frame}+10</parameter>
+      <parameter name="folder">${HOME}/blender</parameter>
+      <parameter name="inputfile">demo.blend</parameter>
+      <parameter name="outputfile">output_demo</parameter>
+      <parameter name="executable">${load_modules}; blender --background ${folder}/${inputfile} --render-output ${folder}/output/${outputfile}-#### -E CYCLES -x 1 -t 0 -s ${frame} -e ${endframe} -a</parameter>
+      <parameter name="queue">batch</parameter>
+      <parameter name="measurement">time -p</parameter>
+    </parameterset>
+
+    <parameterset name="environment">
+      <parameter name="systemname" mode="shell">cat /etc/FZJ/systemname | tr -d "\n"</parameter>
+      <parameter name="load_modules" separator="!" mode="python">  {
+          "juwels": "module purge; module use /gpfs/software/juwels/otherstages/ ; module load Stages/2019a ; module load JUBE GCCcore/.8.3.0 Blender/2.79-binary",
+          "jureca": "module purge; module use /usr/local/software/jureca/OtherStages/ ; module load Stages/2019a ; module load JUBE GCCcore/.8.3.0 Blender/2.79-binary"
+        }["${systemname}"]
+      </parameter>
+    </parameterset>
+
+    <parameterset name="executeset" init_with="platform.xml">
+      <parameter name="args_starter" separator=";">--cpu_bind=none,v --accel-bind=gn</parameter>
+    </parameterset>
+
+
+    <step name="execute" iterations="1">
+      <use>executeset</use>
+      <use>environment</use>
+      <use>systemParameter</use>
+      <use from="platform.xml">jobfiles</use>
+      <use from="platform.xml">executesub</use>
+      <do>$submit submit.job</do>
+      <do done_file="$done_file"></do>
+    </step>
+
+    <!-- Regex pattern -->
+    <patternset name="pattern">
+      <pattern name="imagespersec" type="float">total images/sec: ${jube_pat_fp}</pattern>
+    </patternset>
+
+    <patternset name="jobnumber">
+        <pattern name="jobid">Submitted batch job $jube_pat_int</pattern>
+    </patternset>
+
+    <patternset name="runtimepattern">
+      <pattern name="runtime" type="float" unit="s">real $jube_pat_fp</pattern>
+      <pattern name="error_code" type="int">JUBE_ERR_CODE=$jube_pat_int</pattern>
+    </patternset>
+
+    <!-- Analyse -->
+    <analyser name="analyse" reduce="false">
+      <use>pattern</use>
+      <analyse step="execute">
+        <file>job.out</file>
+        <file use="runtimepattern">job.err</file>
+        <file use="jobnumber">stdout</file>
+      </analyse>
+    </analyser>
+
+    <!-- Create result table -->
+    <result>
+      <use>analyse</use>
+      <table name="result" style="pretty" sort="tf_model,imagespersec" tag="!csv">
+        <column title="Job ID">jobid</column>
+        <column>error_code</column>
+        <column>runtime</column>
+        <column>jube_wp_iteration</column>
+        <column>tf_model</column>
+        <column>nodes</column>
+        <column>taskspernode</column>
+        <column>threadspertask</column>
+        <column>tf_batch_size</column>
+        <column>imagespersec</column>
+	<column>mpi_modules</column>
+      </table>
+
+      <table name="result-csv" style="csv" sort="tf_model,imagespersec" tag="csv">
+        <column>error_code</column>
+        <column>runtime</column>
+        <column>jube_wp_iteration</column>
+        <column>tf_model</column>
+        <column>nodes</column>
+        <column>taskspernode</column>
+        <column>threadspertask</column>
+        <column>tf_batch_size</column>
+        <column>imagespersec</column>
+      </table>
+    </result>
+
+  </benchmark>
+</jube>

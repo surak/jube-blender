@@ -13,4 +13,4 @@ check the frame numbers, the input and output files. Then do a
 jube jube-blender.xml
 ```
 
-This will create a series of png files. To assemble on a Mac, check https://github.com/surak/cocoa-tlassemble
+This will create a series of png files. To assemble them into a video on a Mac, check https://github.com/surak/cocoa-tlassemble
